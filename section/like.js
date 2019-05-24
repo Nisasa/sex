@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const okSchema = mongoose.Schema({
+const likeSchema = mongoose.Schema({
     name: String,
     members: String,
     like1: String,
@@ -9,6 +9,6 @@ const okSchema = mongoose.Schema({
 
 });
 
-const ok = mongoose.model('ok', okSchema);
+const like = mongoose.model('like', likeSchema);
 
-module.exports = ok;
+module.exports = like;

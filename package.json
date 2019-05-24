@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "nodemon bot.js"
   },
   "engines": {
     "node": "8.10.0",
@@ -13,6 +13,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bitcoin": "^3.0.1",
+    "block_io": "^2.0.0",
     "cheerio": "^1.0.0-rc.3",
     "express": "^4.16.4",
     "mongoose": "^5.5.1",

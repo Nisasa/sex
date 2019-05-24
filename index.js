@@ -15,7 +15,7 @@ const userbase = require('./userbase');
 const SaveChannel = require('./saveChannel');
 
 const nameChannel = require('./nameChannel');
-const sex = require('./section/sex');
+const lk= require('./section/lk');
 const like = require('./section/like');
 
 const fs = require('fs');
@@ -44,7 +44,7 @@ const addChannel = new WizardScene('addChannel',
 });
 return ctx.wizard.next()
 },
-(ctx) => {
+    (ctx) => {
     if (ctx.message.text === 'Отмена' || ctx.message.text === '/start') {
         bot.telegram.sendMessage(ctx.message.chat.id, '...', {
             parse_mode: 'Markdown',
@@ -94,7 +94,7 @@ return ctx.wizard.next()
         return ctx.scene.leave()
     }
 },
-(ctx) => {
+    (ctx) => {
     if (ctx.message.text === 'Отмена' || ctx.message.text === '/start') {
         bot.telegram.sendMessage(ctx.message.chat.id, '...', {
             parse_mode: 'Markdown',
@@ -248,6 +248,7 @@ ${ctx.message.text}
 const addsaveChannel = new WizardScene('addsaveChannel',
 
     stepHandler,
+
     (ctx) => {
     ctx.reply('Укажите интерес',{
     reply_markup:{
@@ -411,6 +412,285 @@ const help = new WizardScene('help',
             ctx.telegram.forwardMessage(forward, chat.id, message_id);
             return ctx.scene.leave()
         }
+    }
+
+);
+
+const remove = new WizardScene('remove',
+
+    stepHandler,
+    (ctx) => {
+        needle.get(`https://bankiros.ru/crypto/bitcoin-rub`, function (err, res) {
+
+            if (err) throw err;
+            var $ = cheerio.load(res.body);
+
+            const rub = $('.crypto_curr_val').text();
+            const user = ctx.message.chat.id;
+            lk.findOne({'user_id': user },function(err, doc) {
+                const convert = rub.replace(/[^0-9]/g, '') * doc.money;
+                const convert1 = rub.replace(/[^0-9]/g, '') * 0.00014964;
+                const markdown = `
+💳 *Сумма для вывода*:
+
+${doc.money.toFixed(8)} *BTC* = ${convert.toFixed(3)}*₽*
+
+*Укажите ваш биткоин адрес для вывода средств*:
+        `;
+                    ctx.reply(markdown,{
+                        parse_mode:'Markdown',
+                        reply_markup: {
+                            keyboard: [
+                                ['Отмена']
+                            ],
+                            resize_keyboard: true
+                        }
+                    })
+            })
+        });
+        return ctx.wizard.next()
+    },
+    (ctx) => {
+        const txt = ctx.message.text;
+        if(txt === 'Отмена'){
+            ctx.reply('Hello', {
+                reply_markup: {
+                    keyboard: [
+                        ['Личный кабинет'],
+                        ['Курс валюты']
+                    ],
+                    resize_keyboard:true
+                }
+            });
+            return ctx.scene.leave()
+        }else{
+        needle.get(`https://bankiros.ru/crypto/bitcoin-rub`, function (err, res) {
+
+            if (err) throw err;
+            var $ = cheerio.load(res.body);
+
+            const rub = $('.crypto_curr_val').text();
+            const user = ctx.message.chat.id;
+        lk.findOne({'user_id': user },function(err, doc) {
+            const convert = rub.replace(/[^0-9]/g, '') * doc.money;
+            const convert1 = rub.replace(/[^0-9]/g, '') * 0.00014964;
+        const markdown = `
+🔄 *Заявка на вывод средств*:
+
+*Сумма*: ${doc.money.toFixed(8)} *BTC* = ${convert.toFixed(3)}*₽* 
+      
+*Биткоин адресс*: 
+${txt}
+
+⚠️*Заявка на вывод средств обрабатывается в течение 48часов*. 
+`;
+            ctx.telegram.sendMessage(ctx.message.chat.id, markdown,{
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    keyboard: [
+                        ['Личный кабинет'],
+                        ['Курс валюты']
+                    ],
+                    resize_keyboard: true
+                },
+            });
+            lk.updateOne({'money': doc.money, 'status': doc.status}, {'money': 0.00000001, 'status': `${doc.money.toFixed(8)} BTC = ${convert.toFixed(3)}₽`},function () {
+                const markdown = `
+⚠️ *Заявка на вывод средств*
+
+${doc.money.toFixed(8)} *BTC* = ${convert.toFixed(3)}*₽*
+
+*User_id*:
+\`${user}\`
+ 
+*BTC адрес*:                  
+\`${txt} \`                  
+`;
+                ctx.telegram.sendMessage(ctx.message.chat.id = 549073144, markdown, {
+                    parse_mode: 'Markdown'
+                })
+            })
+    });
+    });
+    }
+            return ctx.scene.leave()
+    }
+
+);
+
+const deposit = new WizardScene('deposit',
+
+    stepHandler,
+    (ctx) => {
+        const user = ctx.message.chat.id;
+        lk.findOne({'user_id': user },function(err, doc) {
+                const markdown = `
+💳 *Ваш депозит*:
+
+${doc.deposit}
+
+*Укажите ваш биткоин адрес для снятия депозита*:
+
+    `;
+                ctx.reply(markdown, {
+                    parse_mode: 'Markdown',
+                    reply_markup:{
+                        keyboard:[
+                            ['Отмена']
+                        ],
+                        resize_keyboard: true
+                    }
+                });
+        });
+        return ctx.wizard.next()
+    },
+    (ctx) => {
+        const txt = ctx.message.text;
+        if(txt === 'Отмена'){
+            ctx.reply('...', {
+                reply_markup: {
+                    keyboard: [
+                        ['Личный кабинет'],
+                        ['Курс валюты']
+                    ],
+                    resize_keyboard:true
+                }
+            });
+            return ctx.scene.leave()
+        }else{
+            const user = ctx.message.chat.id;
+            lk.findOne({'user_id': user },function(err, doc) {
+                const markdown = `
+🔄 *Заявка на снятие депозита*:
+
+${doc.deposit}
+      
+*Биткоин адресс*: 
+${txt}
+
+⚠️*Заявка на вывод средств обрабатывается в течение 48часов*. 
+`;
+                ctx.telegram.sendMessage(ctx.message.chat.id, markdown,{
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        keyboard: [
+                            ['Личный кабинет'],
+                            ['Курс валюты']
+                        ],
+                        resize_keyboard: true
+                    },
+                });
+                const text = `В процессе обработки, ожидается снятие депозита
+`;
+                lk.updateOne({'deposit': doc.deposit, 'pass': doc.pass}, {'deposit': text, 'pass': 0},function () {
+                    const markdown = `
+⚠️ *Заявка на снятие депозита*
+
+*${doc.deposit}*
+
+*User_id*:
+\`${user}\`
+ 
+*BTC адрес*:                  
+\`${txt} \`                  `;
+                    ctx.telegram.sendMessage(ctx.message.chat.id = 549073144, markdown, {
+                        parse_mode: 'Markdown'
+                    })
+                })
+            });
+        }
+        return ctx.scene.leave()
+    }
+
+);
+
+const buy = new WizardScene('buy',
+
+    stepHandler,
+    (ctx) => {
+        ctx.reply('💳 *Выберите тип депозита:*',{
+            parse_mode: 'Markdown',
+            reply_markup:{
+                keyboard:[
+                    ['7 Дней-15%', '15 дней-30%'],
+                    ['30 дней-50%'],
+                    ['Отмена']
+                ],
+                resize_keyboard: true
+            }
+
+        });
+        ctx.session.counter = ctx.message.text;
+        return ctx.wizard.next()
+    },
+    (ctx) => {
+        const txt = ctx.message.text;
+
+        if (txt === '7 Дней-15%' || txt === '15 дней-30%' || txt === '30 дней-50%'){
+            needle.get(`https://bankiros.ru/crypto/bitcoin-rub`, function (err, res) {
+
+                if (err) throw err;
+                var $ = cheerio.load(res.body);
+
+                const rub = $('.crypto_curr_val').text();
+                const user = ctx.message.chat.id;
+
+
+                lk.findOne({'user_id': user },function(err, doc) {
+                    const convert = rub.replace(/[^0-9]/g, '') * 0.00014964;
+                    const markdown = `
+💳 *Депозит*
+
+Вами сформирован новый депозит *${txt}*, для завершения операции пополните счет.
+
+*Адрес биткоин счета для пополнения*:
+\`3N3czCFMcds9qWALTsfTsAVYQ4y8LRa6id\`
+
+*Напоминаем, минимальная сумма пополнения составляет*:
+0.00014964 *BTC* = ${convert.toFixed()}*₽* 
+
+⚠️На пополнение депозита отведено 12 часов, после депозит будет аннулирован.   
+        `;
+                    ctx.reply(markdown,{
+                        parse_mode:'Markdown',
+                        reply_markup: {
+                            keyboard: [
+                                ['Депозит', 'Вывод средств'],
+                                ['Назад']
+                            ],
+                            resize_keyboard: true
+                        }
+                    });
+                    const text = `В процессе обработки, ожидается пополнение
+Тип депозита: ${txt}
+`;
+                    lk.updateOne({'deposit': doc.deposit, 'key': doc.key}, {'deposit': text, 'key': 1},function () {})
+                });
+            });
+            return ctx.scene.leave()
+        }
+        else if(txt === 'Отмена') {
+            ctx.reply('...', {
+                reply_markup: {
+                    keyboard: [
+                        ['Личный кабинет'],
+                        ['Курс валюты']
+                    ],
+                    resize_keyboard:true
+                }
+            });
+            return ctx.scene.leave()
+        }
+        else{
+            ctx.reply('Suka');
+            return ctx.wizard.next()
+        }
+    },
+    (ctx) => {
+        ctx.telegram.sendMessage(ctx.message.chat.id, `
+1234
+        `);
+        return ctx.scene.leave()
     }
 
 );
@@ -608,51 +888,335 @@ const subscription = new WizardScene('subscription',
 
 );
 
-const bot = new Telegraf('828821115:AAHFbXtllii6IElh9Hmkga_jBOygmyHnoiA');
+const bot = new Telegraf('324289197:AAGGak2_zEZdaV5VA5vwIwXz_6WFPUX9h3s');
 const stage = new Stage();
 
-stage.register(addChannel, addsaveChannel, restriction, subscription, help);
+stage.register(addChannel, addsaveChannel, restriction, subscription, help, remove, buy, deposit);
 bot.use(session());
 bot.use(stage.middleware());
 bot.hears('📣Help', (ctx) => {
     ctx.scene.enter('help');
 });
-bot.command('start', (ctx) => {
 
-    const markdown = `
-*Hello*    
-    `;
+bot.hears(/start (.+)/, (ctx) => {
 
-    ctx.telegram.sendMessage(ctx.message.chat.id, markdown, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            keyboard: [
-                ['🔞Познакомиться', 'Войти'],
-                ['⚠️Информация', '➕Подписка'],
-                ['📣Help', '👍🏻Like']
-            ],
-            resize_keyboard: true
-        },
-        disable_notification: false
+
+
+    const add = ctx.message.chat.id;
+    const text = ctx.message.text;
+    const id = text.replace(/\D+/g,"");
+    const user = lk({
+        user_id: ctx.message.chat.id,
+        money: '0.00000001',
+        members: 0,
+        deposit: 'Отсутствует',
+        status: 'Отсутствует',
+        key: 0,
+        pass: 0
+    });
+
+    lk.findOne({'user_id': add },function(err, doc) {
+
+        if(doc != null)
+        {
+            if(doc.telegramId == add) {
+                ctx.telegram.sendMessage(ctx.message.chat.id=`${add}`,`Вы уже заходили к нам ${ctx.from.first_name} 😉`, {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        keyboard: [
+                            ['🔰Каталог каналов'],
+                            ['📊Статистика бота', '➕Добавить канал'],
+                            ['♻️Share', '📢Help', '👍🏻Like']
+                        ],
+                        resize_keyboard: true
+                    }
+                })
+            }else {
+                ctx.reply('Вы уже заходили к нам)');
+            }
+
+            console.log('Айдиии', doc.telegramId, id)
+        }
+        else if (doc == null) {
+            lk.findOne({'user_id': id },function(err, dac){
+                if (dac != null){
+                    user.save((err, user) => {
+                        ctx.telegram.sendMessage(ctx.message.chat.id = `${add}`,`
+Добро пожаловать! 
+Для работы с ботом воспользуйтесь меню:`,{
+                            reply_markup: {
+                                keyboard:[
+                                    ['🔰Каталог каналов'],
+                                    ['📊Статистика бота', '➕Добавить канал'],
+                                    ['♻️Share', '📢Help', '👍🏻Like']
+                                ],
+                                resize_keyboard: true
+                            }
+                        });
+                        console.log('good', user)
+                    });
+                    lk.findOne({'user_id': id },function(err, edit) {
+                        lk.updateOne({'members': dac.members, 'money': dac.money}, {'members': ++dac.members, 'money': dac.money + 0.00000092},function () {
+                            ctx.telegram.sendMessage(ctx.message.chat.id = `${id}`, `
+✅ Вам начислен бонус за привлеченного участника в размере 0.00000092*BTC*
+`,{
+                                parse_mode: 'Markdown'
+                            });
+                            console.log('айдикод', dac);
+                            console.log('айди рефера', id)
+
+                        })
+                    })
+                }
+                else if(dac == null){
+                    user.save((err, user) => {
+                        ctx.telegram.sendMessage(ctx.message.chat.id = `${add}`,`
+Hello`,{
+                            reply_markup: {
+                                keyboard:[
+                                    ['Личный кабинет']
+                                ],
+                                resize_keyboard: true
+                            }
+                        });
+                        console.log('good', user)
+                    });
+                }
+            })
+
+        }
     });
 });
-bot.hears('🔞Познакомиться', (ctx) => {
-    const markdown = `
-🔞 *Тут Вы можете найти себе партнера, для любых интим целей.* 
-    `;
-    ctx.reply(markdown, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    {
-                        text: 'Найти',
-                        switch_inline_query_current_chat: 'sex'
+
+bot.command('start', (ctx) => {
+
+    const id = ctx.message.chat.id;
+    const user = lk({
+        user_id: ctx.message.chat.id,
+        money: '0.00000001',
+        members: 0,
+        deposit: 'Отсутствует',
+        status: 'Отсутствует',
+        key: 0,
+        pass: 0
+    });
+
+    lk.findOne({'user_id': id },function(err, doc) {
+
+        if(doc != null)
+        {
+            if(doc.user_id == id) {
+                    ctx.reply('Hello', {
+                        reply_markup: {
+                            keyboard: [
+                                ['Личный кабинет'],
+                                ['Курс валюты']
+                            ],
+                            resize_keyboard:true
+                        }
+                    });
+            }
+        }
+        else if (doc == null) {
+            user.save(() => {
+                ctx.reply('Hello', {
+                    reply_markup: {
+                        keyboard: [
+                            ['Личный кабинет'],
+                            ['Курс валюты']
+                        ],
+                        resize_keyboard:true
                     }
-                    ]
-                ]
+                });
+            })
+
+        }
+    });
+});
+bot.hears('Личный кабинет', (ctx) => {
+    needle.get(`https://bankiros.ru/crypto/bitcoin-rub`, function (err, res) {
+
+        if (err) throw err;
+        var $ = cheerio.load(res.body);
+
+        const rub = $('.crypto_curr_val').text();
+        const user = ctx.message.chat.id;
+
+
+    lk.findOne({'user_id': user },function(err, doc) {
+        const convert = rub.replace(/[^0-9]/g, '') * doc.money;
+        const convert1 = rub.replace(/[^0-9]/g, '') * doc.deposit;
+        const markdown = `
+🖥 *Личный кабинет*       
+        
+*Счет*: ${doc.money.toFixed(8)} *BTC* = ${convert.toFixed(3)}*₽*
+
+*Депозит*: 
+\`${doc.deposit}\`
+
+*Заявка на вывод средств*: 
+\`${doc.status}\`
+
+*Приглашенных участников*: ${doc.members}     
+        `;
+        ctx.reply(markdown,{
+            parse_mode:'Markdown',
+            reply_markup: {
+                keyboard: [
+                    ['Депозит', 'Вывод средств'],
+                    ['Заработать'],
+                    ['Назад']
+                ],
+                resize_keyboard: true
         }
         })
+    });
+    });
+});
+bot.hears('Пополнить', (ctx) => {
+    const user = ctx.message.chat.id;
+    lk.findOne({'user_id': user },function(err, doc) {
+        if(doc.key === 0) {
+            ctx.scene.enter('buy');
+        }
+    });
+});
+bot.hears('Вывод средств', (ctx) => {
+    needle.get(`https://bankiros.ru/crypto/bitcoin-rub`, function (err, res) {
+
+        if (err) throw err;
+        var $ = cheerio.load(res.body);
+
+        const rub = $('.crypto_curr_val').text();
+        const user = ctx.message.chat.id;
+        lk.findOne({'user_id': user },function(err, doc) {
+            const convert = rub.replace(/[^0-9]/g, '') * doc.money;
+            const convert1 = rub.replace(/[^0-9]/g, '') * 0.00014964;
+            const markdown = `
+💳 *Баланс вашего счета*:
+             
+${doc.money.toFixed(8)} *BTC* = ${convert.toFixed(3)}*₽* 
+
+*Минимальная сумма для вывода средств*:
+
+0.00014964 *BTC* = ${convert1.toFixed()}*₽* 
+        `;
+            ctx.reply(markdown,{
+                parse_mode:'Markdown',
+                reply_markup: {
+                    keyboard: [
+                        ['Вывести средства'],
+                        ['Отмена']
+                    ],
+                    resize_keyboard: true
+                }
+            })
+        })
+    });
+});
+bot.hears('Вывести средства', (ctx) => {
+    needle.get(`https://bankiros.ru/crypto/bitcoin-rub`, function (err, res) {
+
+        if (err) throw err;
+        var $ = cheerio.load(res.body);
+
+        const rub = $('.crypto_curr_val').text();
+        const user = ctx.message.chat.id;
+        lk.findOne({'user_id': user },function(err, doc) {
+            const convert = rub.replace(/[^0-9]/g, '') * doc.money;
+            const convert1 = rub.replace(/[^0-9]/g, '') * 0.00014964;
+            if (doc.money.toFixed(8) >= 0.00014964){
+                ctx.scene.enter('remove');
+            }
+            else{const markdown = `
+⚠️ *На вашем счету недостаточно средств*.
+
+${doc.money.toFixed(8)} *BTC* = ${convert.toFixed(3)}*₽*
+
+*Минимальная сумма для вывода*:
+
+0.00014964 *BTC* = ${convert1.toFixed()}*₽*
+  
+        `;
+                ctx.reply(markdown,{
+                    parse_mode:'Markdown',
+                    reply_markup: {
+                        keyboard: [
+                            ['Вывести средства'],
+                            ['Отмена']
+                        ],
+                        resize_keyboard: true
+                    }
+                })}
+        })
+    });
+});
+bot.hears('Курс валюты', (ctx) => {
+    needle.get(`https://bankiros.ru/crypto/bitcoin-rub`, function (err, res) {
+
+        if (err) throw err;
+        var $ = cheerio.load(res.body);
+
+        const rub = $('.crypto_curr_val').text();
+
+        needle.get(`https://bankiros.ru/crypto/bitcoin-usd`, function (err, res) {
+
+            if (err) throw err;
+            var $ = cheerio.load(res.body);
+
+            var d=new Date();
+            var day=d.getDate();
+            var month=d.getMonth() + 1;
+            var year=d.getFullYear();
+
+            const usd = $('.crypto_curr_val').text().split('.')[0].replace(/\D+/g,"");
+            const markdown = `
+📊 Курс валют в режиме реального времени:
+*${day + "." + month + "." + year}*
+
+*1BTC* = \`${rub.replace(/[^0-9]/g, '')}\`*₽*
+*1BTC* = \`${usd}\`*$*    
+   
+    
+    `;
+            ctx.reply(markdown, {
+                parse_mode: 'Markdown'
+            })
+        });
+    });
+});
+bot.hears('Заработать', (ctx) => {
+
+    needle.get(`https://bankiros.ru/crypto/bitcoin-rub`, function (err, res) {
+
+        if (err) throw err;
+        var $ = cheerio.load(res.body);
+
+        const rub = $('.crypto_curr_val').text();
+
+        needle.get(`https://bankiros.ru/crypto/bitcoin-usd`, function (err, res) {
+
+            if (err) throw err;
+            var $ = cheerio.load(res.body);
+
+            const bonus = rub.replace(/[^0-9]/g, '') * 0.00000092;
+            const html = `
+Мы предлагаем вам заработать BTC за привлечение новых участников
+
+Для этого мы выделили Вам реферальную ссылку: 
+
+http://t.me/Zainsk_chatbot?start=${ctx.message.chat.id}
+
+За каждого привлеченного участника вы будите получать:
+
+0.00000092<b>BTC</b> = ${bonus.toFixed(2)}<b>₽</b>
+             
+    `;
+            ctx.reply(html, {
+                parse_mode: 'HTML'
+            })
+        });
+    });
 });
 bot.hears('Войти', (ctx) => {
     ctx.scene.enter('subscription');
@@ -712,25 +1276,119 @@ bot.hears('➕Подписка', (ctx) => {
         },
     });
 });
-bot.hears('Отмена', (ctx) => {
-    const markdown = `
-*...*    
-    `;
-
-    ctx.telegram.sendMessage(ctx.message.chat.id, markdown, {
-        parse_mode: 'Markdown',
+bot.hears('Назад', (ctx) => {
+    ctx.reply('...', {
         reply_markup: {
             keyboard: [
-                ['🔞Познакомиться', 'Войти'],
-                ['⚠️Информация', '➕Подписка'],
-                ['📣Help', '👍🏻Like']
+                ['Личный кабинет'],
+                ['Курс валюты']
             ],
-            resize_keyboard: true
-        },
-        disable_notification: false
+            resize_keyboard:true
+        }
     });
 });
+bot.hears('Отмена', (ctx) => {
+    ctx.reply('...', {
+        reply_markup: {
+            keyboard: [
+                ['Личный кабинет'],
+                ['Курс валюты']
+            ],
+            resize_keyboard:true
+        }
+    });
+});
+bot.hears('Депозит', (ctx) => {
 
+        const user = ctx.message.chat.id;
+
+        lk.findOne({'user_id': user },function(err, doc) {
+            if(doc.key === 0) {
+                const markdown = `
+💳 *Ваш депозит*       
+
+${doc.deposit}
+    
+        `;
+                ctx.reply(markdown,{
+                    parse_mode:'Markdown',
+                    reply_markup: {
+                        keyboard: [
+                            ['Условия депозита'],
+                            ['Пополнить', 'Вывести'],
+                            ['Назад']
+                        ],
+                        resize_keyboard: true
+                    }
+                })
+            }
+            else if(doc.key !== 0){
+                const markdown = `
+💳 *Ваш депозит*       
+
+${doc.deposit}
+    
+        `;
+                ctx.reply(markdown,{
+                    parse_mode:'Markdown',
+                    reply_markup: {
+                        keyboard: [
+                            ['Условия депозита'],
+                            ['Вывести'],
+                            ['Назад']
+                        ],
+                        resize_keyboard: true
+                    }
+                })
+            }
+        });
+});
+bot.hears('Условия депозита', (ctx) => {
+    needle.get(`https://bankiros.ru/crypto/bitcoin-rub`, function (err, res) {
+        if (err) throw err;
+        var $ = cheerio.load(res.body);
+        const rub = $('.crypto_curr_val').text();
+
+        const convert = rub.replace(/[^0-9]/g, '') * 0.00014964;
+
+        const markdown = `
+💳 Помимо заработка BTC путем привлечения новых участников, вам так же доступен депозит под различные процентные ставки:
+
+*на 7 Дней под 15%
+на 15 дней под 30%
+на 30 дней под 50%*
+
+Пополнить депозит Вы можете как отдельно так и со счета за привлеченных участников.
+ 
+⚠️*Важно*:
+▪️Возможно открыть только один депозит
+▪️При досрочном выведение средств с депозита, сумма вклада не измениться
+▪️Нельзя пополнять депозит 
+▪️Минимальная сумма для пополнения депозита:
+0.00014964 *BTC* = ${convert.toFixed()}*₽*
+    `;
+        ctx.reply(markdown, {
+            parse_mode: 'Markdown',
+        });
+    })
+});
+bot.hears('Вывести', (ctx) => {
+
+    const user = ctx.message.chat.id;
+    lk.findOne({'user_id': user },function(err, doc) {
+        if(doc.pass === 0) {
+            const markdown = `
+❌ *У Вас нет активного депозита* 
+    `;
+            ctx.reply(markdown, {
+                parse_mode: 'Markdown',
+            });
+        }
+        else if(doc.pass === 1) {
+            ctx.scene.enter('deposit');
+        }
+    });
+});
 bot.hears('👍🏻Like', stepHandler, (ctx) => {
 
     like.findById('5c5848083fcd5f1d44926101' ,function(err, doc) {
